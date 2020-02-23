@@ -25,6 +25,7 @@ import org.hotswap.agent.logging.AgentLogger;
 
 import java.io.File;
 import java.lang.reflect.Method;
+import java.net.URL;
 import java.util.*;
 
 /**
@@ -267,7 +268,14 @@ public class AnonymousClassInfos {
 
     // get timestamp on the main class file
     private long lastModified(ClassPool classPool, String className) {
-        String file = classPool.find(className).getFile();
+        if (classPool == null || className == null) {
+            return -1L;
+        }
+        URL url = classPool.find(className);
+        if (url == null) {
+            return -1L;
+        }
+        String file = url.getFile();
         return new File(file).lastModified();
     }
 

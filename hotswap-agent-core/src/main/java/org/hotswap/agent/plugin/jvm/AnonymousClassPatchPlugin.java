@@ -100,10 +100,17 @@ public class AnonymousClassPatchPlugin {
         // skip synthetic classes
         if (classPool.find(className) == null)
             return null;
-
-        AnonymousClassInfos info = getStateInfo(classLoader, classPool, mainClass);
-
-        String compatibleName = info.getCompatibleTransition(javaClass);
+        AnonymousClassInfos info;
+        String compatibleName;
+        try {
+            info = getStateInfo(classLoader, classPool, mainClass);
+            compatibleName = info.getCompatibleTransition(javaClass);
+        } catch (Exception e) {
+            compatibleName = javaClass;
+            LOGGER.error("fixing issue for; ", e);
+            //in case kotlin does magic with regards to the naming ect of classes, then try this.
+            info = getStateInfo(classLoader, classPool, javaClass);
+        }
 
         if (compatibleName != null) {
             LOGGER.debug("Anonymous class '{}' - replacing with class file {}.", javaClass, compatibleName);
@@ -111,8 +118,7 @@ public class AnonymousClassPatchPlugin {
             ctClass.replaceClassName(compatibleName, javaClass);
             return ctClass;
         } else {
-            LOGGER.debug("Anonymous class '{}' - not compatible change is replaced with empty implementation.", javaClass, compatibleName);
-
+            LOGGER.debug("Anonymous class '{}' - not compatible change is replaced with empty implementation.", javaClass);
             // replace current class with empty implementation (to avid not compatible exception)
             CtClass ctClass = classPool.makeClass(javaClass);
             // replace superclass
@@ -120,8 +126,9 @@ public class AnonymousClassPatchPlugin {
             // replace interfaces
             Class[] originalInterfaces = original.getInterfaces();
             CtClass[] interfaces = new CtClass[originalInterfaces.length];
-            for (int i = 0; i < originalInterfaces.length; i++)
+            for (int i = 0; i < originalInterfaces.length; i++) {
                 interfaces[i] = classPool.get(originalInterfaces[i].getName());
+            }
             ctClass.setInterfaces(interfaces);
 
             return ctClass;
@@ -158,6 +165,7 @@ public class AnonymousClassPatchPlugin {
                     return null;
                 }
             }
+
             @Override
             public boolean isForRedefinitionOnly() {
                 return false;
